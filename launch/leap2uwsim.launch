@@ -1,0 +1,7 @@
+<launch>
+
+  <node pkg="leap2uwsim" type="leap2uwsim" name="leap2uwsim" output="screen">
+    <remap from="/leap2uwsim/command" to="/g500/ros_odom_to_pat"/> 
+  </node>
+
+</launch>
