@@ -39,6 +39,7 @@ private:
 
 	float initPosition[3];
 	float currentPosition[3];
+	float previousPosition[3];
 	float initOrientation[4];
 	float currentOrientation[4];
 	ros::Publisher vel_pub_;
@@ -89,28 +90,42 @@ void Leap2Uwsim::leapCallback(const geometry_msgs::PoseStamped::ConstPtr& possta
 	odom.pose.pose.orientation.z=0.0;
 	odom.pose.pose.orientation.w=1;
 
-	cout << "Current hand position: (";
-	//X-axis
-	currentPosition[0] = posstamped->pose.position.x - abs(initPosition[0]);
-	cout << currentPosition[0] << ",";
-	if ((currentPosition[0] >= -15.0) and (currentPosition[0] <= 15.0))
-		currentPosition[0] = 0.00;
-	else
-		currentPosition[0] = (currentPosition[0] < 0 ? -0.05 : 0.05);
-	//Y-axis
-	currentPosition[1] = posstamped->pose.position.y - initPosition[1];
-	cout << currentPosition[1] << ",";
-	if (currentPosition[1] <= 10)
-		currentPosition[1] = 0.00;
-	else
-		currentPosition[1] = (currentPosition[1] < initPosition[1] ? 0.05 : -0.05);
-	//Z-axis
-	currentPosition[2] = posstamped->pose.position.z - abs(initPosition[2]);
-	cout << currentPosition[2] << ")" << endl;
-	if ((currentPosition[2] >= -15.0) and (currentPosition[2] <= 15.0))
-		currentPosition[2] = 0.00;
-	else
-		currentPosition[2] = (currentPosition[2] < 0 ? 0.05 : -0.05);
+	cout << "Absolute hand position: (" << posstamped->pose.position.x << ", " << \
+		posstamped->pose.position.y << ", " << posstamped->pose.position.z << ")" << endl;
+	//if the user don't move the hand, the robot keep the position
+	if ((posstamped->pose.position.x == previousPosition[0]) and \
+		(posstamped->pose.position.y == previousPosition[1]) and \
+		(posstamped->pose.position.z == previousPosition[2]))
+		for (int i=0; i<3; i++)
+			currentPosition[i] = 0.00;
+	else {
+		//store previous position
+		previousPosition[0] = posstamped->pose.position.x;
+		previousPosition[1] = posstamped->pose.position.y;
+		previousPosition[2] = posstamped->pose.position.z;
+		cout << "Referenced hand position: (" ;
+		//X-axis
+		currentPosition[0] = posstamped->pose.position.x - abs(initPosition[0]);
+		cout << currentPosition[0] << ",";
+		if ((currentPosition[0] >= -15.0) and (currentPosition[0] <= 15.0))
+			currentPosition[0] = 0.00;
+		else
+			currentPosition[0] = (currentPosition[0] < 0 ? -0.05 : 0.05);
+		//Y-axis
+		currentPosition[1] = posstamped->pose.position.y - initPosition[1];
+		cout << currentPosition[1] << ",";
+		if (currentPosition[1] <= 10)
+			currentPosition[1] = 0.00;
+		else
+			currentPosition[1] = (currentPosition[1] < initPosition[1] ? 0.05 : -0.05);
+		//Z-axis
+		currentPosition[2] = posstamped->pose.position.z - abs(initPosition[2]);
+		cout << currentPosition[2] << ")" << endl;
+		if ((currentPosition[2] >= -15.0) and (currentPosition[2] <= 15.0))
+			currentPosition[2] = 0.00;
+		else
+			currentPosition[2] = (currentPosition[2] < 0 ? 0.05 : -0.05);
+	}
 
 	//TODO
 	currentOrientation[0] = (posstamped->pose.orientation.x - initPosition[0] ? 0.05 : -0.05);
