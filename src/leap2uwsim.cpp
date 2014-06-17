@@ -21,13 +21,14 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 
-#define TOPIC  "/dataNavigator_G500RAUVI"		//shipweck
-//#define TOPIC  "/dataNavigator"				//CIRS
+//#define TOPIC  "/dataNavigator_G500RAUVI"		//shipweck scene
+#define TOPIC  "/dataNavigator"				//CIRS scene
 
 using namespace std;
 
 
-class Leap2Uwsim {
+class Leap2Uwsim
+{
 
 public:
 	Leap2Uwsim();
@@ -46,7 +47,9 @@ private:
 	ros::Subscriber leap_sub_;
 };
 
-Leap2Uwsim::Leap2Uwsim() {
+
+Leap2Uwsim::Leap2Uwsim()
+{
 	//initializing values
 	initPosition[0] = 0;
 	initPosition[1] = 0;
@@ -62,11 +65,13 @@ Leap2Uwsim::Leap2Uwsim() {
 }
 
 
-void Leap2Uwsim::leapCallback(const geometry_msgs::PoseStamped::ConstPtr& posstamped) {
+void Leap2Uwsim::leapCallback(const geometry_msgs::PoseStamped::ConstPtr& posstamped)
+{
 	int num;
 
 	//Initial user hand position
-	if ((initPosition[0] == 0) and (initPosition[1] == 0) and (initPosition[2] == 0)) {
+	if ((initPosition[0] == 0) and (initPosition[1] == 0) and (initPosition[2] == 0))
+	{
 		initPosition[0] = posstamped->pose.position.x;
 		initPosition[1] = posstamped->pose.position.y;
 		initPosition[2] = posstamped->pose.position.z;
@@ -90,7 +95,7 @@ void Leap2Uwsim::leapCallback(const geometry_msgs::PoseStamped::ConstPtr& possta
 	odom.pose.pose.orientation.z=0.0;
 	odom.pose.pose.orientation.w=1;
 
-	cout << "Absolute hand position: (" << posstamped->pose.position.x << ", " << \
+	//cout << "Absolute hand position: (" << posstamped->pose.position.x << ", " << \
 		posstamped->pose.position.y << ", " << posstamped->pose.position.z << ")" << endl;
 	//if the user don't move the hand, the robot keep the position
 	if ((posstamped->pose.position.x == previousPosition[0]) and \
@@ -98,47 +103,54 @@ void Leap2Uwsim::leapCallback(const geometry_msgs::PoseStamped::ConstPtr& possta
 		(posstamped->pose.position.z == previousPosition[2]))
 		for (int i=0; i<3; i++)
 			currentPosition[i] = 0.00;
-	else {
+	else
+	{
 		//store previous position
 		previousPosition[0] = posstamped->pose.position.x;
 		previousPosition[1] = posstamped->pose.position.y;
 		previousPosition[2] = posstamped->pose.position.z;
-		cout << "Referenced hand position: (" ;
+		//cout << "Referenced hand position: (" ;
 		//X-axis
 		currentPosition[0] = posstamped->pose.position.x - abs(initPosition[0]);
-		cout << currentPosition[0] << ",";
+		//cout << currentPosition[0] << ",";
 		if ((currentPosition[0] >= -15.0) and (currentPosition[0] <= 15.0))
 			currentPosition[0] = 0.00;
 		else
 			currentPosition[0] = (currentPosition[0] < 0 ? -0.05 : 0.05);
 		//Y-axis
 		currentPosition[1] = posstamped->pose.position.y - initPosition[1];
-		cout << currentPosition[1] << ",";
+		//cout << currentPosition[1] << ",";
 		if (currentPosition[1] <= 10)
 			currentPosition[1] = 0.00;
 		else
 			currentPosition[1] = (currentPosition[1] < initPosition[1] ? 0.05 : -0.05);
 		//Z-axis
 		currentPosition[2] = posstamped->pose.position.z - abs(initPosition[2]);
-		cout << currentPosition[2] << ")" << endl;
+		//cout << currentPosition[2] << ")" << endl;
 		if ((currentPosition[2] >= -15.0) and (currentPosition[2] <= 15.0))
 			currentPosition[2] = 0.00;
 		else
 			currentPosition[2] = (currentPosition[2] < 0 ? 0.05 : -0.05);
+		//Y-orientation
+		//cout << "initOrientation = " << initOrientation[1] << " -> ";
+		//cout << "posstamped = " << posstamped->pose.orientation.y << " -> ";
+		currentOrientation[1] = posstamped->pose.orientation.y - abs(initOrientation[1]);
+		//cout << "currentOrientation = " << currentOrientation[1] << " -> ";
+		if ((currentOrientation[1] >= -0.1) and (currentOrientation[1] <= 0.02))
+			currentOrientation[1] = 0.00;
+		else
+			currentOrientation[1] = (currentOrientation[1] < 0 ? -0.05 : 0.05);
 	}
 
-	//TODO
-	currentOrientation[0] = (posstamped->pose.orientation.x - initPosition[0] ? 0.05 : -0.05);
-	currentOrientation[1] = (posstamped->pose.orientation.y - initPosition[1] ? 0.05 : -0.05);
-	currentOrientation[2] = (posstamped->pose.orientation.z - initPosition[2] ? 0.05 : -0.05);
-
+	//Assign the calculated values into the publisher
 	odom.twist.twist.linear.x = currentPosition[2]; 
 	odom.twist.twist.linear.y = currentPosition[0];
 	odom.twist.twist.linear.z = currentPosition[1];
 	odom.twist.twist.angular.x = 0; //roll;
 	odom.twist.twist.angular.y = 0; //pitch;
-	odom.twist.twist.angular.z = 0; //yaw;
-	for (int i=0; i<36; i++) {
+	odom.twist.twist.angular.z = currentOrientation[1]; //yaw;
+	for (int i=0; i<36; i++)
+	{
 		odom.twist.covariance[i]=0;
 		odom.pose.covariance[i]=0;
 	}
@@ -147,7 +159,8 @@ void Leap2Uwsim::leapCallback(const geometry_msgs::PoseStamped::ConstPtr& possta
 }
 
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   ros::init(argc, argv, "leap2uwsim");
   Leap2Uwsim leap2uwsim_control;
   ros::spin();
